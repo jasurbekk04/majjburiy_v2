@@ -19,7 +19,7 @@ let adminState = {};
 
 bot.on('message', async (ctx, next) => {
     console.log(`[DEBUG] Incoming message from ${ctx.from.id}: ${ctx.message.text}`);
-    if (ctx.from.id.toString() !== config.adminId.toString()) return next();
+    if (ctx.from.id.toString().trim() !== config.adminId.toString().trim()) return next();
 
     const state = adminState[ctx.from.id];
     if (!state) return next();

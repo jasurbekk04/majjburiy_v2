@@ -5,14 +5,15 @@ const config = require('./config');
 const adminPanel = (bot) => {
     // Admin checking middleware for this module
     const isAdmin = (ctx) => {
-        const userId = ctx.from?.id?.toString();
-        const configId = config.adminId?.toString();
+        const userId = ctx.from?.id?.toString().trim();
+        const configId = config.adminId?.toString().trim();
         const Match = userId === configId;
         
         console.log(`[DEBUG] UserID: "${userId}" | ConfigID: "${configId}" | Match: ${Match}`);
         
         if (!Match && ctx.message?.text === '/admin') {
             console.log(`[ALERT] Admin panel attempt by non-admin!`);
+            ctx.reply(`Xatolik: Siz admin emassiz. Sizning ID: ${userId}`);
         }
         return Match;
     };
