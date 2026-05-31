@@ -1,5 +1,5 @@
-node_modules/
+node_modules
 .env
-firebase-key.json
-.vscode/
-npm-debug.log
+db.json
+serviceAccountKey.json
+.DS_Store
