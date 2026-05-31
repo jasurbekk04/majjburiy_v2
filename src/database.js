@@ -7,25 +7,26 @@ let serviceAccount;
 
 try {
     if (process.env.FIREBASE_KEY_JSON) {
-        // Use JSON from environment variable (useful for Railway/Heroku)
+        console.log('[DEBUG] Attempting to parse FIREBASE_KEY_JSON...');
         serviceAccount = JSON.parse(process.env.FIREBASE_KEY_JSON);
+        console.log('[DEBUG] FIREBASE_KEY_JSON successfully parsed.');
     } else if (fs.existsSync(config.firebaseKeyPath)) {
-        // Use local file
         serviceAccount = require('../' + config.firebaseKeyPath);
     } else {
-        console.warn('Firebase key not found in ENV or File. Database will not work until configured.');
+        console.warn('[WARNING] Firebase key not found in ENV or File.');
     }
 } catch (e) {
-    console.error('Error loading Firebase service account:', e.message);
+    console.error('[ERROR] Firebase initialization error:', e.message);
 }
 
 if (serviceAccount) {
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
     });
+    console.log('[DEBUG] Firebase Admin initialized.');
 }
-
 const db = admin.firestore();
+console.log('[DEBUG] Firestore initialized.');
 
 // Collections
 const USERS = db.collection('users');
