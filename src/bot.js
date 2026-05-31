@@ -9,7 +9,7 @@ bot.use(async (ctx, next) => {
     if (!ctx.from || ctx.from.is_bot) return next();
     
     // Admin check bypass
-    if (ctx.from.id === config.adminId) return next();
+    if (ctx.from.id.toString() === config.adminId.toString()) return next();
 
     // Skip check for callback queries that verify sub
     if (ctx.callbackQuery && ctx.callbackQuery.data === 'check_sub') return next();
