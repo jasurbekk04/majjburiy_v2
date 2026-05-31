@@ -80,11 +80,11 @@ bot.action('check_sub', async (ctx) => {
 });
 
 // Text message handler
-bot.on('text', async (ctx) => {
+bot.on('text', async (ctx, next) => {
     const text = ctx.message.text;
     
-    // Agar bu buyruq bo'lsa (masalan /admin), unga tegmaymiz
-    if (text.startsWith('/')) return;
+    // Agar bu buyruq bo'lsa (masalan /admin), keyingi handlerga o'tkazamiz
+    if (text.startsWith('/')) return next();
 
     const settings = await dbHelpers.getSettings();
 
