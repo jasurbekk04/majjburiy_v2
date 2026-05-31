@@ -18,6 +18,7 @@ bot.on('chat_join_request', async (ctx) => {
 let adminState = {};
 
 bot.on('message', async (ctx, next) => {
+    console.log(`[DEBUG] Incoming message from ${ctx.from.id}: ${ctx.message.text}`);
     if (ctx.from.id.toString() !== config.adminId.toString()) return next();
 
     const state = adminState[ctx.from.id];

@@ -8,8 +8,11 @@ const adminPanel = (bot) => {
         const userId = ctx.from?.id?.toString();
         const configId = config.adminId?.toString();
         const Match = userId === configId;
+        
+        console.log(`[DEBUG] UserID: "${userId}" | ConfigID: "${configId}" | Match: ${Match}`);
+        
         if (!Match && ctx.message?.text === '/admin') {
-            console.log(`Admin panel attempt by non-admin: ${userId} (Config ID: ${configId})`);
+            console.log(`[ALERT] Admin panel attempt by non-admin!`);
         }
         return Match;
     };
