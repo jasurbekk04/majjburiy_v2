@@ -6,10 +6,14 @@ const dayjs = require('dayjs');
 let serviceAccount;
 
 try {
-    if (fs.existsSync(config.firebaseKeyPath)) {
+    if (process.env.FIREBASE_KEY_JSON) {
+        // Use JSON from environment variable (useful for Railway/Heroku)
+        serviceAccount = JSON.parse(process.env.FIREBASE_KEY_JSON);
+    } else if (fs.existsSync(config.firebaseKeyPath)) {
+        // Use local file
         serviceAccount = require('../' + config.firebaseKeyPath);
     } else {
-        console.warn('Firebase key file not found. Database will not work until configured.');
+        console.warn('Firebase key not found in ENV or File. Database will not work until configured.');
     }
 } catch (e) {
     console.error('Error loading Firebase service account:', e.message);
