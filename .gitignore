@@ -1,0 +1,5 @@
+node_modules/
+.env
+firebase-key.json
+.vscode/
+npm-debug.log
