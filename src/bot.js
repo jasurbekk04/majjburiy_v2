@@ -82,6 +82,10 @@ bot.action('check_sub', async (ctx) => {
 // Text message handler
 bot.on('text', async (ctx) => {
     const text = ctx.message.text;
+    
+    // Agar bu buyruq bo'lsa (masalan /admin), unga tegmaymiz
+    if (text.startsWith('/')) return;
+
     const settings = await dbHelpers.getSettings();
 
     // Check if it's a "code"
