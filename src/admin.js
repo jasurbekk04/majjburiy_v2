@@ -4,7 +4,15 @@ const config = require('./config');
 
 const adminPanel = (bot) => {
     // Admin checking middleware for this module
-    const isAdmin = (ctx) => ctx.from && ctx.from.id === config.adminId;
+    const isAdmin = (ctx) => {
+        const userId = ctx.from?.id?.toString();
+        const configId = config.adminId?.toString();
+        const Match = userId === configId;
+        if (!Match && ctx.message?.text === '/admin') {
+            console.log(`Admin panel attempt by non-admin: ${userId} (Config ID: ${configId})`);
+        }
+        return Match;
+    };
 
     bot.command('admin', async (ctx) => {
         if (!isAdmin(ctx)) return;
