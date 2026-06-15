@@ -44,9 +44,9 @@ async function sleep(ms) {
 }
 
 // Foydalanuvchi obunasini va zayafkasini tekshirish
-async function getUnsubscribedChannels(ctx) {
+async function getUnsubscribedChannels(ctx, collectionName = 'channels') {
     const userId = ctx.from.id;
-    const channelsSnapshot = await db.collection('channels').get();
+    const channelsSnapshot = await db.collection(collectionName).get();
     const unsubscribed = [];
 
     for (const doc of channelsSnapshot.docs) {
@@ -103,7 +103,8 @@ async function sendStart(ctx) {
             return ctx.reply("🛠 Admin Panelga xush kelibsiz:", Markup.keyboard([
                 ['📊 Statistika', '📢 Xabar yuborish'],
                 ['➕ Kanal qo\'shish', '🗑 Kanallarni boshqarish'],
-                ['🔗 Majburiy Link', '🔗 Majbur-2']
+                ['➕ Majbur-2 qo\'shish', '🗑 Majbur-2 boshqarish'],
+                ['🔗 Majburiy Link']
             ]).resize());
         }
 
@@ -137,13 +138,35 @@ bot.on('chat_join_request', async (ctx) => {
 // 5. Obunani tekshirish (Callback)
 bot.action('check_sub', async (ctx) => {
     try {
-        const unsubbed = await getUnsubscribedChannels(ctx);
+        const unsubbed = await getUnsubscribedChannels(ctx, 'channels');
         if (unsubbed.length === 0) {
             await ctx.editMessageText("✅ Rahmat! Obuna tasdiqlandi. Endi kod yuborishingiz mumkin.");
         } else {
             await ctx.answerCbQuery("❌ Ba'zi kanallarga hali obuna bo'lmagansiz yoki so'rov yubormagansiz!", { show_alert: true });
         }
     } catch (e) { console.error("Action error:", e); }
+});
+
+bot.action('check_sub_2', async (ctx) => {
+    try {
+        const unsubbed1 = await getUnsubscribedChannels(ctx, 'channels');
+        if (unsubbed1.length > 0) {
+            return ctx.answerCbQuery("❌ Oldin asosiy kanallarga a'zo bo'ling!");
+        }
+
+        const unsubbed2 = await getUnsubscribedChannels(ctx, 'channels2');
+        if (unsubbed2.length === 0) {
+            const settings = await db.collection('config').doc('settings').get();
+            const link = settings.exists ? settings.data().mandatoryLink : null;
+            if (link) {
+                await ctx.editMessageText(`✅ To'g'ri! Marhamat, kino linki:\n\n${link}`);
+            } else {
+                await ctx.editMessageText("❌ Xatolik: Admin tomonidan link o'rnatilmagan.");
+            }
+        } else {
+            await ctx.answerCbQuery("❌ Ba'zi Majbur-2 kanallariga hali obuna bo'lmagansiz!", { show_alert: true });
+        }
+    } catch (e) { console.error("Sub 2 Action Error:", e); }
 });
 
 // 6. Admin Funksiyalari
@@ -209,13 +232,29 @@ bot.hears('🔗 Majburiy Link', async (ctx) => {
     ctx.reply(`Hozirgi majburiy link: ${currentLink}\n\nYangi linkni yuboring:`);
 });
 
-bot.hears('🔗 Majbur-2', async (ctx) => {
+bot.hears('➕ Majbur-2 qo\'shish', (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return;
-    const settings = await db.collection('config').doc('settings').get();
-    const currentLink2 = settings.exists ? settings.data().mandatoryLink2 : "O'rnatilmagan";
+    adminState[ctx.from.id] = { step: 'add_ch2_id' };
+    ctx.reply("Majbur-2 kanali ID raqamini yuboring (-100...):");
+});
+
+bot.hears('🗑 Majbur-2 boshqarish', async (ctx) => {
+    if (ctx.from.id !== ADMIN_ID) return;
+    const snapshot = await db.collection('channels2').get();
+    if(snapshot.empty) return ctx.reply("Hech qanday Majbur-2 kanali ulanmagan.");
     
-    adminState[ctx.from.id] = { step: 'set_mandatory_link_2' };
-    ctx.reply(`Hozirgi Majbur-2 linki: ${currentLink2}\n\nYangi linkni yuboring:`);
+    for (const doc of snapshot.docs) {
+        const ch = doc.data();
+        ctx.reply(`Majbur-2: ${ch.name}\nID: ${ch.channelId}\nLink: ${ch.link}`, 
+            Markup.inlineKeyboard([[Markup.button.callback("❌ O'chirish", `del2_${doc.id}`)]]));
+    }
+});
+
+bot.action(/^del2_(.+)$/, async (ctx) => {
+    if (ctx.from.id !== ADMIN_ID) return;
+    await db.collection('channels2').doc(ctx.match[1]).delete();
+    ctx.answerCbQuery("O'chirildi!");
+    ctx.editMessageText("🗑 Majbur-2 kanali o'chirildi.");
 });
 
 bot.hears('📢 Xabar yuborish', (ctx) => {
@@ -266,10 +305,19 @@ bot.on('message', async (ctx) => {
             return ctx.reply("✅ Majburiy link yangilandi!");
         }
 
-        if (state.step === 'set_mandatory_link_2') {
-            await db.collection('config').doc('settings').set({ mandatoryLink2: text }, { merge: true });
+        // Majburiy 2 qo'shish
+        if (state.step === 'add_ch2_id') {
+            adminState[userId] = { step: 'add_ch2_link', id: text };
+            return ctx.reply("Majbur-2 uchun link yuboring (https://t.me/...):");
+        }
+        if (state.step === 'add_ch2_link') {
+            adminState[userId] = { step: 'add_ch2_name', id: state.id, link: text };
+            return ctx.reply("Tugma uchun nom yuboring:");
+        }
+        if (state.step === 'add_ch2_name') {
+            await db.collection('channels2').add({ channelId: state.id, link: state.link, name: text });
             delete adminState[userId];
-            return ctx.reply("✅ Majbur-2 linki yangilandi!");
+            return ctx.reply("✅ Majbur-2 kanali muvaffaqiyatli qo'shildi!");
         }
 
         if (state.step === 'ad_content') {
@@ -296,28 +344,28 @@ bot.on('message', async (ctx) => {
 
     // Foydalanuvchi xabari
     if (text && !text.startsWith('/')) {
-        const unsubbed = await getUnsubscribedChannels(ctx);
-        if (unsubbed.length > 0) {
-            const buttons = unsubbed.map((l) => [Markup.button.url(l.name, l.link)]);
+        const unsubbed1 = await getUnsubscribedChannels(ctx, 'channels');
+        if (unsubbed1.length > 0) {
+            const buttons = unsubbed1.map((l) => [Markup.button.url(l.name, l.link)]);
             buttons.push([Markup.button.callback("✅ Tekshirish", "check_sub")]);
             return ctx.reply("⚠️ Botdan foydalanish uchun kanallarga obuna bo'ling yoki so'rov yuboring:", Markup.inlineKeyboard(buttons));
         }
 
         // Agar matn faqat raqamlardan iborat bo'lsa (Kino kodi)
         if (/^\d+$/.test(text)) {
+            // Endi Majbur-2 tekshiramiz
+            const unsubbed2 = await getUnsubscribedChannels(ctx, 'channels2');
+            if (unsubbed2.length > 0) {
+                const buttons = unsubbed2.map((l) => [Markup.button.url(l.name, l.link)]);
+                buttons.push([Markup.button.callback("✅ Tekshirish", "check_sub_2")]);
+                return ctx.reply("⚠️ Iltimos, quyidagi kanallarimga ham obuna bo'ling!", Markup.inlineKeyboard(buttons));
+            }
+
             const settings = await db.collection('config').doc('settings').get();
             const link = settings.exists ? settings.data().mandatoryLink : null;
-            const link2 = settings.exists ? settings.data().mandatoryLink2 : null;
 
             if (link) {
-                if (link2) {
-                    return ctx.reply("⚠️ Iltimos, quyidagi kanallarimga obuna bo'ling!", Markup.inlineKeyboard([
-                        [Markup.button.url("🔗 Kanalga obuna bo'lish", link2)],
-                        [Markup.button.url("🎬 Kinoni ko'rish", link)]
-                    ]));
-                } else {
-                    ctx.reply(`✅ Kod qabul qilindi. Marhamat, quyidagi link orqali ko'rishingiz mumkin:\n\n${link}`);
-                }
+                ctx.reply(`✅ Kod qabul qilindi. Marhamat, quyidagi link orqali ko'rishingiz mumkin:\n\n${link}`);
             } else {
                 ctx.reply("❌ Xatolik: Admin tomonidan link o'rnatilmagan.");
             }
