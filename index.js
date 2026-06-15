@@ -112,13 +112,7 @@ async function sendStart(ctx) {
         if (unsubbed.length === 0) {
             return ctx.reply(`👋 Xush kelibsiz ${userName}! Marhamat, kino kodini yuboring.`);
         } else {
-            const settings = await db.collection('config').doc('settings').get();
-            const link2 = settings.exists ? settings.data().mandatoryLink2 : null;
-            
             const buttons = unsubbed.map((l) => [Markup.button.url(l.name, l.link)]);
-            if (link2) {
-                buttons.push([Markup.button.url("🔗 Majburiy Link 2", link2)]);
-            }
             buttons.push([Markup.button.callback("✅ Tekshirish", "check_sub")]);
             return ctx.reply("🔴 Botdan foydalanish uchun quyidagi kanallarga obuna bo'ling yoki so'rov yuboring:", Markup.inlineKeyboard(buttons));
         }
@@ -304,13 +298,7 @@ bot.on('message', async (ctx) => {
     if (text && !text.startsWith('/')) {
         const unsubbed = await getUnsubscribedChannels(ctx);
         if (unsubbed.length > 0) {
-            const settings = await db.collection('config').doc('settings').get();
-            const link2 = settings.exists ? settings.data().mandatoryLink2 : null;
-
             const buttons = unsubbed.map((l) => [Markup.button.url(l.name, l.link)]);
-            if (link2) {
-                buttons.push([Markup.button.url("🔗 Majburiy Link 2", link2)]);
-            }
             buttons.push([Markup.button.callback("✅ Tekshirish", "check_sub")]);
             return ctx.reply("⚠️ Botdan foydalanish uchun kanallarga obuna bo'ling yoki so'rov yuboring:", Markup.inlineKeyboard(buttons));
         }
@@ -319,8 +307,17 @@ bot.on('message', async (ctx) => {
         if (/^\d+$/.test(text)) {
             const settings = await db.collection('config').doc('settings').get();
             const link = settings.exists ? settings.data().mandatoryLink : null;
+            const link2 = settings.exists ? settings.data().mandatoryLink2 : null;
+
             if (link) {
-                ctx.reply(`✅ Kod qabul qilindi. Marhamat, quyidagi link orqali ko'rishingiz mumkin:\n\n${link}`);
+                if (link2) {
+                    return ctx.reply("⚠️ Iltimos, quyidagi kanallarimga obuna bo'ling!", Markup.inlineKeyboard([
+                        [Markup.button.url("🔗 Kanalga obuna bo'lish", link2)],
+                        [Markup.button.url("🎬 Kinoni ko'rish", link)]
+                    ]));
+                } else {
+                    ctx.reply(`✅ Kod qabul qilindi. Marhamat, quyidagi link orqali ko'rishingiz mumkin:\n\n${link}`);
+                }
             } else {
                 ctx.reply("❌ Xatolik: Admin tomonidan link o'rnatilmagan.");
             }
