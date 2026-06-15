@@ -103,7 +103,7 @@ async function sendStart(ctx) {
             return ctx.reply("🛠 Admin Panelga xush kelibsiz:", Markup.keyboard([
                 ['📊 Statistika', '📢 Xabar yuborish'],
                 ['➕ Kanal qo\'shish', '🗑 Kanallarni boshqarish'],
-                ['🔗 Majburiy Link']
+                ['🔗 Majburiy Link', '🔗 Majbur-2']
             ]).resize());
         }
 
@@ -112,7 +112,13 @@ async function sendStart(ctx) {
         if (unsubbed.length === 0) {
             return ctx.reply(`👋 Xush kelibsiz ${userName}! Marhamat, kino kodini yuboring.`);
         } else {
+            const settings = await db.collection('config').doc('settings').get();
+            const link2 = settings.exists ? settings.data().mandatoryLink2 : null;
+            
             const buttons = unsubbed.map((l) => [Markup.button.url(l.name, l.link)]);
+            if (link2) {
+                buttons.push([Markup.button.url("🔗 Majburiy Link 2", link2)]);
+            }
             buttons.push([Markup.button.callback("✅ Tekshirish", "check_sub")]);
             return ctx.reply("🔴 Botdan foydalanish uchun quyidagi kanallarga obuna bo'ling yoki so'rov yuboring:", Markup.inlineKeyboard(buttons));
         }
@@ -209,6 +215,15 @@ bot.hears('🔗 Majburiy Link', async (ctx) => {
     ctx.reply(`Hozirgi majburiy link: ${currentLink}\n\nYangi linkni yuboring:`);
 });
 
+bot.hears('🔗 Majbur-2', async (ctx) => {
+    if (ctx.from.id !== ADMIN_ID) return;
+    const settings = await db.collection('config').doc('settings').get();
+    const currentLink2 = settings.exists ? settings.data().mandatoryLink2 : "O'rnatilmagan";
+    
+    adminState[ctx.from.id] = { step: 'set_mandatory_link_2' };
+    ctx.reply(`Hozirgi Majbur-2 linki: ${currentLink2}\n\nYangi linkni yuboring:`);
+});
+
 bot.hears('📢 Xabar yuborish', (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return;
     ctx.reply("Xabar yuborish turini tanlang:", Markup.inlineKeyboard([
@@ -257,6 +272,12 @@ bot.on('message', async (ctx) => {
             return ctx.reply("✅ Majburiy link yangilandi!");
         }
 
+        if (state.step === 'set_mandatory_link_2') {
+            await db.collection('config').doc('settings').set({ mandatoryLink2: text }, { merge: true });
+            delete adminState[userId];
+            return ctx.reply("✅ Majbur-2 linki yangilandi!");
+        }
+
         if (state.step === 'ad_content') {
             adminState[userId] = { step: 'ad_btn_ask', msg: message };
             return ctx.reply("Xabarga tugma qo'shilsinmi?", Markup.inlineKeyboard([
@@ -283,7 +304,13 @@ bot.on('message', async (ctx) => {
     if (text && !text.startsWith('/')) {
         const unsubbed = await getUnsubscribedChannels(ctx);
         if (unsubbed.length > 0) {
+            const settings = await db.collection('config').doc('settings').get();
+            const link2 = settings.exists ? settings.data().mandatoryLink2 : null;
+
             const buttons = unsubbed.map((l) => [Markup.button.url(l.name, l.link)]);
+            if (link2) {
+                buttons.push([Markup.button.url("🔗 Majburiy Link 2", link2)]);
+            }
             buttons.push([Markup.button.callback("✅ Tekshirish", "check_sub")]);
             return ctx.reply("⚠️ Botdan foydalanish uchun kanallarga obuna bo'ling yoki so'rov yuboring:", Markup.inlineKeyboard(buttons));
         }
