@@ -54,7 +54,7 @@ async function getUnsubscribedChannels(ctx, collectionName = 'channels') {
         try {
             const member = await ctx.telegram.getChatMember(ch.channelId, userId);
             const isMember = ['member', 'administrator', 'creator'].includes(member.status);
-            
+
             if (!isMember) {
                 // Agar a'zo bo'lmasa, zayafka yuborganmi tekshiramiz
                 const requestDoc = await db.collection('requests').doc(`${userId}_${ch.channelId}`).get();
@@ -82,7 +82,7 @@ async function sendStart(ctx) {
         // Foydalanuvchini saqlash yoki yangilash
         const userRef = db.collection('users').doc(userId.toString());
         const userDoc = await userRef.get();
-        
+
         if (!userDoc.exists) {
             await userRef.set({
                 userId: userId,
@@ -164,7 +164,7 @@ bot.action('check_sub_2', async (ctx) => {
                 await ctx.editMessageText("❌ Xatolik: Admin tomonidan link o'rnatilmagan.");
             }
         } else {
-            await ctx.answerCbQuery("❌ Ba'zi Majbur-2 kanallariga hali obuna bo'lmagansiz!", { show_alert: true });
+            await ctx.answerCbQuery("❌kanallarga hali obuna bo'lmagansiz!", { show_alert: true });
         }
     } catch (e) { console.error("Sub 2 Action Error:", e); }
 });
@@ -172,16 +172,16 @@ bot.action('check_sub_2', async (ctx) => {
 // 6. Admin Funksiyalari
 bot.hears('📊 Statistika', async (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return;
-    
+
     const now = Date.now();
     const last24h = new Date(now - 24 * 60 * 60 * 1000);
 
     const usersSnapshot = await db.collection('users').get();
     const totalUsers = usersSnapshot.size;
-    
+
     let active24h = 0;
     let blockedCount = 0;
-    
+
     usersSnapshot.forEach(doc => {
         const data = doc.data();
         if (data.status === 'blocked') blockedCount++;
@@ -192,10 +192,10 @@ bot.hears('📊 Statistika', async (ctx) => {
     const channelsCount = channelsSnapshot.size;
 
     ctx.reply(`📊 *Bot statistikasi:*\n\n` +
-              `👤 Jami foydalanuvchilar: ${totalUsers}\n` +
-              `✅ Faol (24s): ${active24h}\n` +
-              `🚫 Bloklaganlar: ${blockedCount}\n` +
-              `📢 Ulangan kanallar: ${channelsCount}`, { parse_mode: 'Markdown' });
+        `👤 Jami foydalanuvchilar: ${totalUsers}\n` +
+        `✅ Faol (24s): ${active24h}\n` +
+        `🚫 Bloklaganlar: ${blockedCount}\n` +
+        `📢 Ulangan kanallar: ${channelsCount}`, { parse_mode: 'Markdown' });
 });
 
 bot.hears('➕ Kanal qo\'shish', (ctx) => {
@@ -207,11 +207,11 @@ bot.hears('➕ Kanal qo\'shish', (ctx) => {
 bot.hears('🗑 Kanallarni boshqarish', async (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return;
     const snapshot = await db.collection('channels').get();
-    if(snapshot.empty) return ctx.reply("Hech qanday kanal ulanmagan.");
-    
+    if (snapshot.empty) return ctx.reply("Hech qanday kanal ulanmagan.");
+
     for (const doc of snapshot.docs) {
         const ch = doc.data();
-        ctx.reply(`Nomi: ${ch.name}\nID: ${ch.channelId}\nLink: ${ch.link}`, 
+        ctx.reply(`Nomi: ${ch.name}\nID: ${ch.channelId}\nLink: ${ch.link}`,
             Markup.inlineKeyboard([[Markup.button.callback("❌ O'chirish", `del_${doc.id}`)]]));
     }
 });
@@ -227,7 +227,7 @@ bot.hears('🔗 Majburiy Link', async (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return;
     const settings = await db.collection('config').doc('settings').get();
     const currentLink = settings.exists ? settings.data().mandatoryLink : "O'rnatilmagan";
-    
+
     adminState[ctx.from.id] = { step: 'set_mandatory_link' };
     ctx.reply(`Hozirgi majburiy link: ${currentLink}\n\nYangi linkni yuboring:`);
 });
@@ -241,11 +241,11 @@ bot.hears('➕ Majbur-2 qo\'shish', (ctx) => {
 bot.hears('🗑 Majbur-2 boshqarish', async (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return;
     const snapshot = await db.collection('channels2').get();
-    if(snapshot.empty) return ctx.reply("Hech qanday Majbur-2 kanali ulanmagan.");
-    
+    if (snapshot.empty) return ctx.reply("Hech qanday Majbur-2 kanali ulanmagan.");
+
     for (const doc of snapshot.docs) {
         const ch = doc.data();
-        ctx.reply(`Majbur-2: ${ch.name}\nID: ${ch.channelId}\nLink: ${ch.link}`, 
+        ctx.reply(`Majbur-2: ${ch.name}\nID: ${ch.channelId}\nLink: ${ch.link}`,
             Markup.inlineKeyboard([[Markup.button.callback("❌ O'chirish", `del2_${doc.id}`)]]));
     }
 });
@@ -284,7 +284,7 @@ bot.on('message', async (ctx) => {
     // Admin holatlari
     if (userId === ADMIN_ID && adminState[userId]) {
         let state = adminState[userId];
-        
+
         if (state.step === 'add_ch_id') {
             adminState[userId] = { step: 'add_ch_link', id: text };
             return ctx.reply("Kanal uchun link yuboring (https://t.me/...):");
@@ -298,7 +298,7 @@ bot.on('message', async (ctx) => {
             delete adminState[userId];
             return ctx.reply("✅ Kanal muvaffaqiyatli qo'shildi!");
         }
-        
+
         if (state.step === 'set_mandatory_link') {
             await db.collection('config').doc('settings').set({ mandatoryLink: text }, { merge: true });
             delete adminState[userId];
@@ -380,7 +380,7 @@ async function broadcast(ctx, msgId, isForward, kb = null) {
     const usersSnapshot = await db.collection('users').get();
     const total = usersSnapshot.size;
     ctx.reply(`🚀 ${total} kishiga yuborish boshlandi...`);
-    
+
     let count = 0;
     let blocked = 0;
 
